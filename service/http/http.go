@@ -1,12 +1,17 @@
 package http
 
 import (
+	"fmt"
 	"net"
 	"net/http"
 	"os"
 	"path"
 	"time"
 
+	"github.com/VictoriaMetrics/VictoriaMetrics/app/vminsert"
+	"github.com/VictoriaMetrics/VictoriaMetrics/app/vmselect"
+	"github.com/VictoriaMetrics/VictoriaMetrics/app/vmstorage"
+	"github.com/VictoriaMetrics/VictoriaMetrics/lib/httpserver"
 	conprofhttp "github.com/pingcap/ng-monitoring/component/conprof/http"
 	"github.com/pingcap/ng-monitoring/component/topsql"
 	"github.com/pingcap/ng-monitoring/config"
@@ -26,6 +31,7 @@ func ServeHTTP(l *config.Log, listener net.Listener) {
 	gin.SetMode(gin.ReleaseMode)
 	ng := gin.New()
 
+	log.Info("starting vmselect http service", zap.String("address", listener.Addr().String()))
 	var logFile *os.File
 	var err error
 	if l.Path != "" {
@@ -62,14 +68,55 @@ func ServeHTTP(l *config.Log, listener net.Listener) {
 	promGroup.Any("", func(c *gin.Context) {
 		promHandler.ServeHTTP(c.Writer, c.Request)
 	})
+	// selectUI := ng.Group("/select")
+	// selectUI.Use(gin.WrapF(timeseries.SelectHandler))
 
+	wh := &wrapHeander{ngHanlder: ng}
 	httpServer = &http.Server{
-		Handler:           ng,
+		Handler:           wh,
 		ReadHeaderTimeout: 5 * time.Second,
 	}
 	if err = httpServer.Serve(listener); err != nil && err != http.ErrServerClosed {
 		log.Warn("failed to serve http service", zap.Error(err))
 	}
+}
+
+type wrapHeander struct {
+	ngHanlder http.Handler
+}
+
+func (wrap *wrapHeander) ServeHTTP(w http.ResponseWriter, r *http.Request) {
+	if r.URL.Path == "/" {
+		if r.Method != "GET" {
+			return
+		}
+		w.Header().Add("Content-Type", "text/html; charset=utf-8")
+		fmt.Fprintf(w, "<h2>Single-node VictoriaMetrics</h2></br>")
+		fmt.Fprintf(w, "See docs at <a href='https://docs.victoriametrics.com/'>https://docs.victoriametrics.com/</a></br>")
+		fmt.Fprintf(w, "Useful endpoints:</br>")
+		httpserver.WriteAPIHelp(w, [][2]string{
+			{"vmui", "Web UI"},
+			{"targets", "discovered targets list"},
+			{"api/v1/targets", "advanced information about discovered targets in JSON format"},
+			{"config", "-promscrape.config contents"},
+			{"metrics", "available service metrics"},
+			{"flags", "command-line flags"},
+			{"api/v1/status/tsdb", "tsdb status page"},
+			{"api/v1/status/top_queries", "top queries"},
+			{"api/v1/status/active_queries", "active queries"},
+		})
+	}
+	if vminsert.RequestHandler(w, r) {
+		return
+	}
+	if vmselect.RequestHandler(w, r) {
+		log.Info("select handler", zap.String("request", r.URL.String()), zap.String("form", r.Form.Encode()))
+		return
+	}
+	if vmstorage.RequestHandler(w, r) {
+		return
+	}
+	wrap.ngHanlder.ServeHTTP(w, r)
 }
 
 type Status struct {
