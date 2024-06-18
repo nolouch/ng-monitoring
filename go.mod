@@ -182,3 +182,5 @@ replace github.com/pingcap/tidb/parser => github.com/pingcap/tidb/parser v0.0.0-
 replace github.com/genjidb/genji/engine/badgerengine => github.com/crazycs520/genji/engine/badgerengine v0.12.1-0.20220328082424-727a2d089bde
 
 replace github.com/dgraph-io/ristretto => github.com/dgraph-io/ristretto v0.1.1-0.20220403145359-8e850b710d6d
+
+replace github.com/pingcap/tipb => github.com/nolouch/tipb v0.0.0-20240618080759-88d20476da08

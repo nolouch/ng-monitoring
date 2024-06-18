@@ -219,6 +219,8 @@ func rsMeteringProtoToMetrics(
 
 	sqlDigest := hex.EncodeToString(tag.SqlDigest)
 	planDigest := hex.EncodeToString(tag.PlanDigest)
+	tableName := string(tag.TableName)
+	schemaName := string(tag.Schema)
 
 	mCpu := Metric{
 		Metric: recordTags{
@@ -227,6 +229,8 @@ func rsMeteringProtoToMetrics(
 			InstanceType: instanceType,
 			SQLDigest:    sqlDigest,
 			PlanDigest:   planDigest,
+			DB:           schemaName,
+			Table:        tableName,
 		},
 	}
 	mReadRow := Metric{
@@ -236,6 +240,8 @@ func rsMeteringProtoToMetrics(
 			InstanceType: instanceType,
 			SQLDigest:    sqlDigest,
 			PlanDigest:   planDigest,
+			DB:           schemaName,
+			Table:        tableName,
 		},
 	}
 	mReadIndex := Metric{
@@ -245,6 +251,8 @@ func rsMeteringProtoToMetrics(
 			InstanceType: instanceType,
 			SQLDigest:    sqlDigest,
 			PlanDigest:   planDigest,
+			DB:           schemaName,
+			Table:        tableName,
 		},
 	}
 	mWriteRow := Metric{
@@ -254,6 +262,8 @@ func rsMeteringProtoToMetrics(
 			InstanceType: instanceType,
 			SQLDigest:    sqlDigest,
 			PlanDigest:   planDigest,
+			DB:           schemaName,
+			Table:        tableName,
 		},
 	}
 	mWriteIndex := Metric{
@@ -263,6 +273,7 @@ func rsMeteringProtoToMetrics(
 			InstanceType: instanceType,
 			SQLDigest:    sqlDigest,
 			PlanDigest:   planDigest,
+			DB:           schemaName,
 		},
 	}
 
